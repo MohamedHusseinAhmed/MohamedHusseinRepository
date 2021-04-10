@@ -76,9 +76,7 @@ def setACValues(idd,power,mode,Ttemp,Ctemp,fanSpeed):
         response = requests.put(url,headers=header,data=ac_body)
         if(response.status_code==200):
             return 'ok'
-    else:
-        CreateAC((str(id)+'_'),idd,power,mode,Ttemp,Ctemp,fanSpeed)
-
+    
 def GetTargetAC(id):
     url = base_url+'/api/v1/acs/'
     header = {'Content-Type': 'application/json', 'Authorization': 'Bearer '+token,'Accept-Language': 'en_US'}
@@ -95,7 +93,7 @@ def GetTargetAC(id):
             except KeyError:
                 print ('not found')
                 
-def GetACValues(id):
+def GetACValues():
     url = base_url+'/api/v1/acs/'
     header = {'Content-Type': 'application/json', 'Authorization': 'Bearer '+str(token),'Accept-Language': 'en_US'}
     # call get service with headers and params
@@ -104,8 +102,7 @@ def GetACValues(id):
         loaded_json = json.loads(response.text)
         for item in loaded_json:
             try:
-                if  item['group']==id :
-                    return [item['value'],item['mode'] ,item['currentTemp'] ,item['targetTemp'] ,item['fanSpeed'] ]
+                read_AC_state_db(item['value'],item['mode'] ,item['currentTemp'] ,item['targetTemp'] ,item['fanSpeed'],item['group'] )
             except IndexError:
                 print ('not found')
             except KeyError:
@@ -161,9 +158,11 @@ def AirCond_WriteControlPacket(AirCond_ID ,Address ,Value,Socket ):
     Packet[6]=((Crc)&0x00FF)
     Socket.send(bytearray(Packet))
     print("sent ",bytearray(Packet))
-    sleep(.3)
-    received = Socket.recv(1024)
-    print("received",received) 
+    try:
+        received = Socket.recv(1024)
+    except socket.timeout:
+        print("Timeout raised and caught.")
+ 
 
 def AirCond_StatusPacket(AirCond_ID,Socket):
     Packet=[0x01,0x02,0x03,0x04,0x05,0x00,0x00,0x00]
@@ -177,7 +176,7 @@ def AirCond_StatusPacket(AirCond_ID,Socket):
 #    print("%04X"%(Crc))
     Packet[7]=((Crc >>8)&0x00FF)
     Packet[6]=((Crc)&0x00FF)
-    Socket.send(bytearray(Packet)) 
+    Socket.sendall(bytearray(Packet)) 
     print("status packet ",bytearray(Packet))
 
 def AirCond_GetStatusPacket(Received_Packet):
@@ -222,16 +221,10 @@ def write_AC_state_db(AC_ID,AC_Status,AC_CurrentTemp,AC_TargetTemp ,AC_Mode,AC_F
             setACValues(AC_ID,state,mode,AC_TargetTemp,AC_CurrentTemp,AC_Fan)
             print(AC_ID,AC_Status,AC_CurrentTemp,AC_TargetTemp ,AC_Mode,AC_Fan)
 ##################################################
-def read_AC_state_db():
-
-    valuesList=GetACValues(1)
-    AC_ID=1
-    AC_Status=valuesList[0]
-    AC_CurrentTemp=valuesList[2]
-    AC_TargetTemp=valuesList[3]
-    AC_Mode=valuesList[1]
-    AC_Fan= valuesList[4]
+def read_AC_state_db(AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID):
+    #item['value'],item['mode'] ,item['currentTemp'] ,item['targetTemp'] ,item['fanSpeed'],item['group'] 
     #idd,power,mode,Ttemp,Ctemp,fanSpeed)
+    print("DB => ",AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID)
     if Chk_inLists(AC_ID,AC_Status,AC_Mode,AC_TargetTemp,AC_CurrentTemp,AC_Fan)==False:
         idList.append(AC_ID)
         powerList.append(AC_Status)
@@ -242,6 +235,7 @@ def read_AC_state_db():
     else:
         if ChkState_inLists(AC_ID,AC_Status,AC_Mode,AC_TargetTemp,AC_CurrentTemp,AC_Fan)==False:
             setState_inLists(AC_ID,AC_Status,AC_Mode,AC_TargetTemp,AC_CurrentTemp,AC_Fan)
+            print("I'm in Else & if ")
             #AC_Status
             if(AC_Status == 'on'):
               AirCond_WriteControlPacket(AC_ID ,0x00 ,0x01 ,AirCond_socket)  
@@ -266,11 +260,13 @@ def read_AC_state_db():
 
 def AirCond_SocketComm(portNo,Str_Ip,Socket):
     Socket.connect((Str_Ip, portNo))
+    Socket.settimeout(1)
     # receive Init Message from Sena Dummy Receive
     received = Socket.recv(1024)
     print("received",received) 
   
-HOST = '192.168.1.100'
+#HOST = '10.4.13.150'
+HOST = '192.168.1.150'    
 PORT = 7001
 AirCond_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print("AirCond_socket",AirCond_socket)
@@ -279,11 +275,17 @@ AirCond_SocketComm(PORT,HOST,AirCond_socket)
 
 if __name__ == '__main__':
     token = Login(email,password)
+    setACValues(3,'on','cool',20,16,2)
     while True:
-
-        AirCond_StatusPacket(0x01,AirCond_socket)
-        AirCond_GetStatusPacket(AirCond_socket.recv(1024))
-        read_AC_state_db()
+        GetACValues()
+        for i in range(len(idList)):
+            try:
+                sleep(1)
+                AirCond_StatusPacket(idList[i],AirCond_socket)
+                AirCond_GetStatusPacket(AirCond_socket.recv(1024))
+                sleep(1)
+            except socket.timeout:
+                print("Timeout raised and caught.")
         
         print(idList)
         print(powerList)
@@ -291,4 +293,4 @@ if __name__ == '__main__':
         print(TargetList)
         print(CurrentList)
         print(fanList)
-        sleep(5)
+        

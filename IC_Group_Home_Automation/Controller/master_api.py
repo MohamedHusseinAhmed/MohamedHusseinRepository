@@ -7,6 +7,7 @@ import glob
 import requests
 from requests.auth import HTTPBasicAuth 
 import json
+import serial.tools.list_ports
 
 base_url = 'http://localhost:9001'
 token =''
@@ -26,8 +27,21 @@ SWITCH_STATE_BYTE      = 12
 SWITCH_ID_BYTE         = 10
 
 
-master_port = serial.Serial('/dev/ttyUSB0', 9600,timeout = 2) # Establish the connection on a specific port
-sensors_port = serial.Serial('/dev/ttyUSB0', 9600,timeout = 2) # Establish the connection on a specific port
+#master_port = serial.Serial('/dev/ttyUSB1', 9600,timeout = 2) # Establish the connection on a specific port
+#sensors_port = serial.Serial('/dev/ttyUSB0', 9600,timeout = 2) # Establish the connection on a specific port
+
+ports = serial.tools.list_ports.comports()
+
+for i in range (0, len(ports)):
+    
+    if ports[i].hwid[12]=='1'and ports[i].hwid[13] == 'A' and ports[i].hwid[14]== '8' and ports[i].hwid[15] == '6':
+        print("Sensors Port connected" , ports[i].hwid)
+        print("",ports[i].device)# This is Device that's will be used to connect serial
+        sensors_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
+    elif ports[i].hwid[12]=='0'and ports[i].hwid[13] == '6' and ports[i].hwid[14]== '7' and ports[i].hwid[15] == 'B':    
+        print("USB to Serial Connected" , ports[i].hwid)
+        print("",ports[i].device)# This is Device that's will be used to connect serial
+        master_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
 
 state_on  = 0x010A
 state_off = 0x0000
@@ -455,6 +469,7 @@ if __name__ == '__main__':
         #get_curtain_status()
         GetCurtainState();
         print (groupList)
+        print (zoneList)
         print (buttonList)
         print (stateList)
         

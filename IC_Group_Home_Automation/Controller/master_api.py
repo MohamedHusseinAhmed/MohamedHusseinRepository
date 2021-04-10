@@ -370,18 +370,47 @@ def get_emergency_status():
     print(response)
     for x in response:
         #print(x)
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "N")): #S1N
-            motion_1_state='on'
-            print("motion_1")
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "N")): #S2N
-            motion_2_state='on'
-            print("motion_2")
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "F")): #S1F
-            motion_1_state='off'
-            print("motion_1")
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "F")): #S2F
-            motion_2_state='off'
-            print("motion_2")
+        #motion is on #SE1_ON
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "N")):
+            motion_state='on'
+            print("motion_on")
+        #touch is on #SE2_ON    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "N")):
+            touch_state='on'
+            print("touch_on")
+        #window is on #SE3_ON    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "3") and (response[5] == "N")):
+            window_state='on'
+            print("window_on")
+        #gas is on #SE4_ON    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "4") and (response[5] == "N")):
+            gas_state='on'
+            print("gas_on")
+        #fire is on #SE5_ON    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "5") and (response[5] == "N")):
+            fire_state='on'
+            print("fire_on")
+
+        #motion is on #SE1_OFF
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "F")):
+            motion_state='off'
+            print("motion_off")
+        #touch is on #SE2_OFF    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "F")):
+            touch_state='off'
+            print("touch_off")
+        #window is on #SE3_OFF    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "3") and (response[5] == "F")):
+            window_state='off'
+            print("window_off")
+        #gas is on #SE4_OFF    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "4") and (response[5] == "F")):
+            gas_state='off'
+            print("gas_off")
+        #fire is on #SE5_OFF    
+        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "5") and (response[5] == "F")):
+            fire_state='off'
+            print("fire_off")
     response = 0
    
 

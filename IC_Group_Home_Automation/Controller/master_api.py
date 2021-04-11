@@ -34,11 +34,12 @@ ports = serial.tools.list_ports.comports()
 
 for i in range (0, len(ports)):
     
-    if ports[i].hwid[12]=='1'and ports[i].hwid[13] == 'A' and ports[i].hwid[14]== '8' and ports[i].hwid[15] == '6':
-        print("Sensors Port connected" , ports[i].hwid)
-        print("",ports[i].device)# This is Device that's will be used to connect serial
-        sensors_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
-    elif ports[i].hwid[12]=='0'and ports[i].hwid[13] == '6' and ports[i].hwid[14]== '7' and ports[i].hwid[15] == 'B':    
+   # if ports[i].hwid[12]=='1'and ports[i].hwid[13] == 'A' and ports[i].hwid[14]== '8' and ports[i].hwid[15] == '6':
+   #     print("Sensors Port connected" , ports[i].hwid)
+   #     print("",ports[i].device)# This is Device that's will be used to connect serial
+   #     sensors_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
+   # print(ports[i].hwid)
+    if ports[i].hwid[12]=='0'and ports[i].hwid[13] == '6' and ports[i].hwid[14]== '7' and ports[i].hwid[15] == 'B':    
         print("USB to Serial Connected" , ports[i].hwid)
         print("",ports[i].device)# This is Device that's will be used to connect serial
         master_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
@@ -64,48 +65,6 @@ response = numpy.array([])
 ######################################
 ######################################
 ######################################
-"""
-def assign_usb_port():
-    global usb_master
-    global usb_sensors
-    global master_port
-    global sensors_port
-    global x
-    
-    response = 0
-   
-    ports = glob.glob('/dev/ttyU*')
-    result = []
-    for port in ports:
-        try:
-            s = serial.Serial(port)
-            s.close()
-            result.append(port)
-        except (OSError, serial.SerialException):
-            pass
-         
-    if(len(result) > 0):
-        loop_index = 0
-        for loop_index in result:
-            master_port = serial.Serial(loop_index, 9600,timeout = 1)
-            if(usb_master != 'MASTER'):
-                test_switch_state(0x00,0x00,0x00,'off')
-                print('one')
-            response = master_port.read(NUM_BYTES_SWITCH_DATA)
-            print(loop_index, response)
-            if ((len(response) > 0) and (usb_master != 'MASTER') and (response[6] == 0x12) and (response[7] == 0x04)):
-                master_port = serial.Serial(loop_index, 9600,timeout = 1)
-                usb_master = 'MASTER'
-                print('USB0_MASTER')
-            if((len(response) > 0) and (usb_sensors != 'SENSORS') and (response[0] == "S") and (response[0] == "E")):
-                sensors_port = serial.Serial(loop_index, 9600,timeout = 1)
-                usb_sensors = 'SENSORS'
-                print('USB0_SENSORS')
-            else:
-                print("USB0_NotFound")
-            print(result)     
- """
-
 
 def Login(email,password):
     data ={'email': str(email), 'password': str(password)}
@@ -363,58 +322,6 @@ def set_curtain_state(device_group,device_zone, button_id, device_state):
 
 ######################################
 
-def get_emergency_status():
-    sensors_port.flush()
-    response = 0
-    response = sensors_port.read(14)
-    print(response)
-    for x in response:
-        #print(x)
-        #motion is on #SE1_ON
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "N")):
-            motion_state='on'
-            print("motion_on")
-        #touch is on #SE2_ON    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "N")):
-            touch_state='on'
-            print("touch_on")
-        #window is on #SE3_ON    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "3") and (response[5] == "N")):
-            window_state='on'
-            print("window_on")
-        #gas is on #SE4_ON    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "4") and (response[5] == "N")):
-            gas_state='on'
-            print("gas_on")
-        #fire is on #SE5_ON    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "5") and (response[5] == "N")):
-            fire_state='on'
-            print("fire_on")
-
-        #motion is on #SE1_OFF
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "1") and (response[5] == "F")):
-            motion_state='off'
-            print("motion_off")
-        #touch is on #SE2_OFF    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "2") and (response[5] == "F")):
-            touch_state='off'
-            print("touch_off")
-        #window is on #SE3_OFF    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "3") and (response[5] == "F")):
-            window_state='off'
-            print("window_off")
-        #gas is on #SE4_OFF    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "4") and (response[5] == "F")):
-            gas_state='off'
-            print("gas_off")
-        #fire is on #SE5_OFF    
-        if ((response[0] == "S") and (response[1] == "E") and (response[2] == "5") and (response[5] == "F")):
-            fire_state='off'
-            print("fire_off")
-    response = 0
-   
-
-
 def ChkState_inLists(group,zone, button, state):
     for i in range(len(groupList)):
         if groupList[i] == group and zoneList[i] == zone and buttonList[i] == button:
@@ -461,26 +368,7 @@ def write_curtain_state_db(device_group,device_zone, button_id, device_state):
 ######################################
 def read_device_state_db(device_name,device_zone,device_group):
     return device_state
-######################################
-######################################
-def test_switch_state(device_group,device_zone, button_id, device_state):
-
-    
-    if (device_state == 'on'):
-        device_state_l = 0x01
-        device_state_h = 0x0A
-    elif (device_state == 'off'):
-        device_state_l = 0x00
-        device_state_h = 0x00
-    
-    crc8 = libscrc.intel(bytearray([0x02,0xE1,0x01,0x08,0x00,0x0A,0x12,0x03,device_zone,device_group,button_id,device_state_l,device_state_h]))
-    send_request_status = [0x02,0xE1,0x01,0x08,0x00,0x0A,0x12,0x03,device_zone,device_group,button_id,device_state_l,device_state_h,crc8,0x03]
-    v_send_request_status = bytearray(send_request_status)
-    
-    master_port.write(serial.to_bytes(v_send_request_status))
-    response = 0
-    #response = master_port.read(NUM_BYTES_SWITCH_DATA)
-    #print("response set_switch_state ",response)
+#####################################
 
 ######################################
 if __name__ == '__main__':
@@ -489,40 +377,12 @@ if __name__ == '__main__':
     while True:
         #device_group,device_zone, button_id
         get_master_status()
-        #get_switch_status()
         sleep(.1)
         GetState()
-        """
-        set_curtain_state(0x01,0x01,0x01,'up')
-        """
-        #get_curtain_status()
         GetCurtainState();
         print (groupList)
         print (zoneList)
         print (buttonList)
         print (stateList)
-        
-        #set_switch_All(0x01, 0x03,'off')
-        #set_switch_state(0x01, 0x03, 0x01, 'on')
-        #get_emergency_status()
         sleep(1)
     
-    
-""" 
-while True:
-    #device_group,device_zone, button_id
-    #get_switch_status(0x01, 0x03, 0x01)
-
-    #Firstly check the usb is connected and working 
-    if(usb_master != 'MASTER') or (usb_sensors != 'SENSORS') :
-        assign_usb_port()
-
-    if(usb_master == 'MASTER'):
-        #set_switch_All(0x01, 0x03,'off')
-        #set_switch_state(0x01, 0x03, 0x01, 'on')
-        print('MASTER_alive')
-    if(usb_sensors == 'SENSORS'):
-        print('SENSORS_alive')
-
-    sleep(1)
-"""

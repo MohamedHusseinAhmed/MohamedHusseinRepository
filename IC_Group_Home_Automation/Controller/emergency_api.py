@@ -8,20 +8,33 @@ import requests
 from requests.auth import HTTPBasicAuth 
 import json
 import serial.tools.list_ports
+import paho.mqtt.client as mqtt
+import json
+import threading
+import time
+# The callback function of connection
+def on_connect(client, userdata, flags, rc):
+    print(f"Connected with result code {rc}")
+    client.subscribe("sensors/#")
+def on_message(client, userdata, msg):
+    loaded_json = json.loads(msg.payload)
 
-base_url = 'http://localhost:9001'
+def thread_function():
+    client.loop_forever()
+
+def on_publish(client,userdata,result):             #create function for callback
+    print("data published \n")
+
+
+base_url = 'http://localhost:9000'
 token =''
 email='root@root.com'
 password='123456789'
-groupList=[]
-zoneList=[]
-buttonList=[]
+nameList=[]
+ 
 stateList=[]
 
-groupCurtainList=[]
-zoneCurtainList=[]
-buttonCurtainList=[]
-stateCurtainList=[]
+ 
 
 ports = serial.tools.list_ports.comports()
 
@@ -61,7 +74,7 @@ def Login(email,password):
         return loaded_json['token']
                                  
 def CreateDevice(name,state):
-    data ={ 'email': email,'password': password,'name': name}
+    data ={ 'email': email,'password': password,'name': name,'army':'on'}
     url = base_url+'/api/v1/sensors/'
     header = { 'Authorization': 'Bearer '+token}
     # call get service with headers and params
@@ -80,17 +93,13 @@ def setzones(name,state):
             return 'ok'
 
 def setState(name,state):
-    id = GetTargetDevice(name)
+    listt = GetTargetDevice(name)
+    id=listt[0]
     print (id)
     if id !=None:
-        device_body = {'_id':id ,'createdAt':None ,'updatedAt': None,'macAddress': None,'tag': None,'version':None,'intensity': None,'value': state,'__v': '','name': ''}
-        url = base_url+'/api/v1/sensors/'+id
-        header = { 'Authorization': 'Bearer '+token}
-        # call get service with headers and params
-        response = requests.put(url,headers=header,data=device_body)
-        print(response.text)
-        if(response.status_code==200):
-            return ('ok')
+        #device_body = {'_id':id ,'createdAt':None ,'updatedAt': None,'macAddress': None,'tag': None,'version':None,'intensity': None,'value': state,'__v': '','name': ''}
+        MQTT_MSG=json.dumps({'_id':id ,'createdAt':None ,'updatedAt': None,'macAddress': None,'version':None,'tag': None,'army':listt[1],'intensity': None,'value': state,'__v': '','name': ''})
+        client.publish("sensors/"+id, payload=MQTT_MSG)
     else:
         CreateDevice(name,state)
 
@@ -104,7 +113,7 @@ def GetTargetDevice(name):
         for item in loaded_json:
             try:
                 if item['name']==name:
-                    return item['_id']
+                    return [item['_id'],item['army']]
             except IndexError:
                 print ('not found')
             except KeyError:
@@ -140,7 +149,7 @@ def get_emergency_status():
     print(response)
 
     #motion is on #SE1_ON
-    if (response[0] == 0x53) and (response[1] == 0x45):
+    if ( len(response) >0) and (response[0] == 0x53) and (response[1] == 0x45):
         if(response[2] == 0x31) and (response[5] == 0x4E):
             motion_state='on'
             write_device_state_db('motion',motion_state)
@@ -170,60 +179,79 @@ def get_emergency_status():
         if(response[2] == 0x31) and (response[5] == 0x46):
             motion_state='off'
             write_device_state_db('motion',motion_state)
-            print("motion_off")
+            #print("motion_off")
         #touch is on #SE2_OFF    
         if(response[2] == 0x32) and (response[5] == 0x46):
             touch_state='off'
             write_device_state_db('touch',touch_state)
-            print("touch_off")
+            #print("touch_off")
         #window is on #SE3_OFF    
         if(response[2] == 0x33) and (response[5] == 0x46):
             window_state='off'
             write_device_state_db('window',window_state)
-            print("window_off")
+            #print("window_off")
         #gas is on #SE4_OFF    
         if(response[2] == 0x34) and (response[5] == 0x46):
             gas_state='off'
             write_device_state_db('gas',gas_state)
-            print("gas_off")
+            #print("gas_off")
         #fire is on #SE5_OFF    
         if(response[2] == 0x35) and (response[5] == 0x46):
             fire_state='off'
             write_device_state_db('fire',fire_state)
-            print("fire_off") 
+            #print("fire_off") 
 
 ######################################
-def ChkState_inLists(group,zone, button, state):
-    for i in range(len(groupList)):
-        if groupList[i] == group and zoneList[i] == zone and buttonList[i] == button:
+def ChkState_inLists(name, state):
+    for i in range(len(nameList)):
+        if nameList[i] == name:
             if stateList[i]==state:
                 return True
     return False
-def setState_inLists(group,zone, button, state):
-    for i in range(len(groupList)):
-        if groupList[i] == group and zoneList[i] == zone and buttonList[i] == button:
+def setState_inLists(name, state):
+    for i in range(len(nameList)):
+        if nameList[i] == name:
             stateList[i]=state
 
-def Chk_inLists(group,zone, button):
-    for i in range(len(groupList)):
-        if groupList[i] == group and zoneList[i] == zone and buttonList[i] == button:
+def Chk_inLists(name):
+    for i in range(len(nameList)):
+        if nameList[i] == name:
                 return True
     return False
 ######################################
 
 def write_device_state_db(name,sensor_state):
     print('state => ',sensor_state)
-    setState(name,sensor_state)
+    if Chk_inLists(name)==False:
+        nameList.append(name)
+        stateList.append(sensor_state)
+        setState(name,sensor_state)
+    else:
+        if ChkState_inLists( name,sensor_state)==False:
+            setState_inLists( name,sensor_state)
+            setState( name,sensor_state)
+    
+    
+    
     
 ######################################
  
+def thread_function():
+    while True:
+        get_emergency_status()
+        sleep(.1)
 
 ######################################
 if __name__ == '__main__':
     token = Login(email,password)
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.on_publish = on_publish
+    client.connect("localhost", 1883, 30)
+    x = threading.Thread(target=thread_function)
+    sleep(.2)
+    x.start()
     #setState(3,1,9,'on')
-    while True:
-        get_emergency_status()
-        sleep(1)
     
   

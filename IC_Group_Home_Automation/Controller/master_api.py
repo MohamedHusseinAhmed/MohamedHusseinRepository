@@ -1,7 +1,7 @@
 from time import sleep
 import serial
 #import pymysql
-import numpy
+import numpy as np
 import libscrc
 import glob
 import requests
@@ -44,11 +44,11 @@ read=0;
 ports = serial.tools.list_ports.comports()
 for i in range (0, len(ports)):
     
-    if ports[i].hwid[12]=='1'and ports[i].hwid[13] == 'A' and ports[i].hwid[14]== '8' and ports[i].hwid[15] == '6':
-        print("Sensors Port connected" , ports[i].hwid)
-        print("",ports[i].device)# This is Device that's will be used to connect serial
-        sensors_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
-    elif ports[i].hwid[12]=='0'and ports[i].hwid[13] == '6' and ports[i].hwid[14]== '7' and ports[i].hwid[15] == 'B':    
+    #if ports[i].hwid[12]=='1'and ports[i].hwid[13] == 'A' and ports[i].hwid[14]== '8' and ports[i].hwid[15] == '6':
+        #print("Sensors Port connected" , ports[i].hwid)
+        #print("",ports[i].device)# This is Device that's will be used to connect serial
+        #sensors_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
+    if ports[i].hwid[12]=='0'and ports[i].hwid[13] == '6' and ports[i].hwid[14]== '7' and ports[i].hwid[15] == 'B':    
         print("USB to Serial Connected" , ports[i].hwid)
         print("",ports[i].device)# This is Device that's will be used to connect serial
         master_port = serial.Serial(ports[i].device, 9600,timeout = 2) # Establish the connection on a specific port
@@ -71,7 +71,8 @@ usb_sensors = 0
 #sensors_port = 0
 x = 'first'
 
-response = numpy.array([])
+#response= np.array([])
+#response_filtered=np.array([])
 ######################################
 ######################################
 
@@ -184,8 +185,7 @@ def get_emergency_status():
     response = 0
     sensors_port.flush()
     response = sensors_port.readline()
-    #print(response)
-
+    print(response)
     #motion is on #SE1_ON
     if ( len(response) >0) and (response[0] == 0x53) and (response[1] == 0x45):
         if(response[2] == 0x31) and (response[5] == 0x4E):
@@ -277,7 +277,7 @@ def Em_write_device_state_db(name,sensor_state):
 def Em_thread_function():
     while True:
         get_emergency_status()
-        sleep(.1)
+        #sleep(.1)
 
 ######################################
 
@@ -338,7 +338,7 @@ def GetTargetDevice(group,zone,button):
     response = requests.get(url,headers=header)
     if(response.status_code==200):
         loaded_json = json.loads(response.text)
-        print("from db : ", loaded_json)
+        #print("from db : ", loaded_json)
         for item in loaded_json:
             try:
                 if item['zone']==zone and item['group']==group and item['button']==button:
@@ -382,7 +382,7 @@ def CreateCurtains(name,group,zone,button,state):
 
 def setCurtainState(group,zone,button,state):
     id = GetTargetCurtain(group,zone,button)
-    print (id)
+    #print (id)
     if id !=None:
         MQTT_MSG=json.dumps({'_id':id ,'createdAt':None ,'updatedAt': None,'macAddress': None,'tag': None,'version':None,'intensity': None,'group': group,'zone': zone,'button': button,'value': state,'__v': '','name': '','email': '','picture': '','createdBy': ''})
         client.publish("curtains/"+id, payload=MQTT_MSG)
@@ -407,7 +407,7 @@ def GetTargetCurtain(group,zone,button):
                 
 def GetCurtainState(body):
     item = json.loads(body)
-    print (item)
+    #print (item)
     try:
         print('Curtain => zone : '+ str(item['zone']) +' group :' +str(item['group'])+' button : '+str(item['button']) + ' State : '+ item['value'] )
         if ChkCurtain_inLists(item['group'],item['zone'],item['button'])==False:
@@ -429,18 +429,37 @@ def GetCurtainState(body):
 ######################################
 def get_master_status():
     master_port.flush()
-    response = 0
+    response= np.array([0])
+    response_filtered=np.array([0])
+    b_response = bytearray(response)
+    mx = 0
+    c=0
     if write==0:
         read=1
-        response = master_port.read(16)
-        master_port.flush()
+        if(master_port.in_waiting):
+            response = master_port.read(50)
+            #TODO: search for a sequence
+            b_response = bytearray(response)
+            #print("response ",response)
+            #print("response length", np.size(b_response)) 
+
+            mx = response.find(b'\x02\x01\xE1\x09', mx)
+            if mx != -1:
+                print("filtered index => ",mx)
+
+                
+        response_filtered = response[mx : ]
+           
+        b_response_filtered = bytearray(response_filtered)
+        #print("response_filtered ",response_filtered)
+        #print("response_filtered length",np.size(b_response_filtered))
+
         read=0
-        print("response master",response)
-        print("response master length",len(response))
-        if ((len(response) > 12) and (response[6] == 0x12) and (response[7] == 0x06)):  
-            get_switch_status(response)
-        elif ((len(response) > 12) and (response[6] == 0x13) and (response[7] == 0x06)):  
-            get_curtain_status(response)   
+        if ((np.size(b_response_filtered) > 12) and (b_response_filtered[6] == 0x12) and (b_response_filtered[7] == 0x06)):  
+            get_switch_status(b_response_filtered)
+        elif ((np.size(b_response_filtered) > 12) and (b_response_filtered[6] == 0x13) and (b_response_filtered[7] == 0x06)):  
+            get_curtain_status(b_response_filtered)
+        master_port.flush()
 
 ######################################
             
@@ -487,7 +506,7 @@ def set_switch_state(device_group,device_zone, button_id, device_state):
     response = 0
     #response = master_port.read(NUM_BYTES_SWITCH_DATA)
     #print("response set_switch_state ",response)
-    response = 0
+    #response = 0
     write=0
 
 ######################################
@@ -572,9 +591,9 @@ def CreateAC(name,idd,power,mode,Ttemp,Ctemp,fanSpeed):
 
 
 def setACValues(idd,power,mode,Ttemp,Ctemp,fanSpeed):
-    print ('Values => ',idd,power,mode,Ttemp,Ctemp,fanSpeed)
+    #print ('Values => ',idd,power,mode,Ttemp,Ctemp,fanSpeed)
     id = GetTargetAC(idd)
-    print (id)
+    #print (id)
     if id !=None:
         MQTT_MSG=json.dumps({'_id':id ,'currentTemp':Ctemp ,'targetTemp': Ttemp,'fanSpeed': fanSpeed,'mode': mode,'value': power,'macAddress': None,'tag': None,'version':None,'intensity': None,'group': idd,'zone': None,'__v': '','name': '','email': '','picture': '','createdBy': ''})
         client.publish("acs/"+id, payload=MQTT_MSG)
@@ -634,7 +653,7 @@ def AirCond_ReadControlPacket(AirCond_ID ,Address ,Value ,Socket):
     Packet[4]=0x00
     Packet[5]=Value
     Crc = calc_crc(bytearray([Packet[0],Packet[1],Packet[2],Packet[3],Packet[4],Packet[5]]))
-    print("%04X"%(Crc))
+    #print("%04X"%(Crc))
     Packet[6]=((Crc >>8)&0x00FF)
     Packet[7]=((Crc)&0x00FF)
 #    print("%04X"%(Crc))
@@ -722,6 +741,7 @@ def write_AC_state_db(AC_ID,AC_Status,AC_CurrentTemp,AC_TargetTemp ,AC_Mode,AC_F
 def read_AC_state_db(AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID):
     #item['value'],item['mode'] ,item['currentTemp'] ,item['targetTemp'] ,item['fanSpeed'],item['group'] 
     #idd,power,mode,Ttemp,Ctemp,fanSpeed)
+    print(idList)
     for i in range(len(idList)):
         print(AC_ID)
         if idList[i] == AC_ID :
@@ -747,7 +767,7 @@ def read_AC_state_db(AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID
         
   
         
-    print("DB => ",AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID)
+    #print("DB => ",AC_Status,AC_Mode,AC_CurrentTemp,AC_TargetTemp,AC_Fan,AC_ID)
     if ChkAC_inLists(AC_ID,AC_Status,AC_Mode,AC_TargetTemp,AC_CurrentTemp,AC_Fan)==False:
         idList.append(AC_ID)
         powerList.append(AC_Status)
@@ -865,15 +885,15 @@ if __name__ == '__main__':
     #setState(3,1,9,'on')
     ac = threading.Thread(target=thread_functionAC)
     ac.start()
-    em = threading.Thread(target=Em_thread_function)
-    em.start()
+    #em = threading.Thread(target=Em_thread_function)
+    #em.start()
     #client.loop_forever()
     while True:
         #device_group,device_zone, button_id
         get_master_status()
-        print (groupCurtainList)
-        print (zoneCurtainList)
-        print (buttonCurtainList)
-        print (stateCurtainList)
+        #print (groupCurtainList)
+        #print (zoneCurtainList)
+        #print (buttonCurtainList)
+        #print (stateCurtainList)
         sleep(.2)
     

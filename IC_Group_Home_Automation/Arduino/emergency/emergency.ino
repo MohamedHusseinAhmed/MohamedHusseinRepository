@@ -1,9 +1,12 @@
+\
+#define NUM_SENSORS 5
+String sensors_status[NUM_SENSORS]={"SE1_OFF", "SE2_OFF", "SE3_OFF", "SE4_OFF", "SE5_OFF"};
 
 int motionPin = A3;    // select the input pin for the motion
 int touchPin  = A5;    // select the input pin for the touch
-int windowPin = A2;    // select the input pin for the window
+int windowPin = A4;    // select the input pin for the window
 int gasPin = A1;    // select the input pin for the gas
-int firePin   = A4;    // select the input pin for the fire
+int firePin   = A2;    // select the input pin for the fire
 
 int ledPin = 13;      // select the pin for the LED
 
@@ -37,60 +40,67 @@ void loop() {
 /*********************** Start of Motion Sensor ***********************/
   if(motionValue > 200)
   {
-    //sendCommand = 1;
-    Serial.println("SE1_ON");
+    //Serial.println("SE1_ON");
+    sensors_status[0] = "SE1_ON";
+    
     // turn the ledPin on
     digitalWrite(ledPin, HIGH);
-    delay(1000);
+    delay(50);
   }
   else
   {
      // turn the ledPin off:
      digitalWrite(ledPin, LOW); 
-     Serial.println("SE1_OFF");
+     //Serial.println("SE1_OFF");
+     sensors_status[0] = "SE1_OFF";
   }
  /*********************** End of Motion Sensor ***********************/
  
 /*********************** Start of Touch Sensor ***********************/
-  if (touchValue == 0)                                                                                                                          
+  if (touchValue > 200)                                                                                                                          
   {
     touchTimeout++;
-    if(touchTimeout >= 5)
+    if(touchTimeout >= 2)
     {
-     //sendCommand = 1;
      // turn the ledPin on
      digitalWrite(ledPin, HIGH);
-     Serial.println("SE2_ON");
+     Serial.println(touchValue);
+     sensors_status[1] = "SE2_ON";
+    
      touchTimeout = 0; 
-     delay(1000);
+     delay(50);
     }
     else
     {
       // turn the ledPin off:
       digitalWrite(ledPin, LOW);
-      Serial.println("SE2_OFF");
+      //Serial.println("SE2_OFF");
+      //sensors_status[1] = "SE2_OFF";
     }
   }
   else
   {
     touchTimeout = 0;
+    sensors_status[1] = "SE2_OFF";
   }
 /*********************** End of Touch Sensor ***********************/
  
 /*********************** Start of Window Sensor ***********************/
-  if(windowValue < 200)
+  if(windowValue > 200)
   {
-    //sendCommand = 1;
-    Serial.println("SE3_ON");
+    //Serial.println("SE3_ON");
+    sensors_status[2] = "SE3_ON";
+    
     // turn the ledPin on
     digitalWrite(ledPin, HIGH);
-    delay(1000);
+    delay(50);
   }
   else
   {
      // turn the ledPin off:
      digitalWrite(ledPin, LOW); 
-     Serial.println("SE3_OFF");
+     //Serial.println("SE3_OFF");
+     sensors_status[2] = "SE3_OFF";
   }
  /*********************** End of Window Sensor ***********************/
 
@@ -98,16 +108,19 @@ void loop() {
   if(gasValue > 200)
   {
     //sendCommand = 1;
-    Serial.println("SE4_ON");
+    //Serial.println("SE4_ON");
+    sensors_status[3] = "SE4_ON";
+    
     // turn the ledPin on
     digitalWrite(ledPin, HIGH);
-    delay(1000);
+    delay(50);
   }
   else
   {
      // turn the ledPin off:
      digitalWrite(ledPin, LOW); 
-     Serial.println("SE4_OFF");
+     //Serial.println("SE4_OFF");
+     sensors_status[3] = "SE4_OFF";
   }
  /*********************** End of Gas Sensor ***********************/
 
@@ -115,19 +128,26 @@ void loop() {
   if(fireValue > 200)
   {
     //sendCommand = 1;
-    Serial.println("SE5_ON");
+    //Serial.println("SE5_ON");
+    sensors_status[4] = "SE5_ON";
     // turn the ledPin on
     digitalWrite(ledPin, HIGH);
-    delay(1000);
+    delay(50);
   }
   else
   {
      // turn the ledPin off:
      digitalWrite(ledPin, LOW); 
-     Serial.println("SE5_OFF");
+     //Serial.println("SE5_OFF");
+     sensors_status[4] = "SE5_OFF";
   }
  /*********************** End of Gas Sensor ***********************/
-   
-  delay(1000);
+
+  Serial.println(sensors_status[0]);
+  Serial.println(sensors_status[1]);
+  Serial.println(sensors_status[2]);
+  Serial.println(sensors_status[3]);
+  Serial.println(sensors_status[4]);
+  delay(500);
   
 }
